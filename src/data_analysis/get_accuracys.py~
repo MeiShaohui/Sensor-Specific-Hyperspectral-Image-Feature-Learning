@@ -1,0 +1,29 @@
+import os,sys
+import h5py
+import string
+import numpy as np
+import scipy.io as sio
+from optparse import OptionParser
+
+def get_accuracy_from_small_number_finetune_pavia():
+    data_in_name = "/home/jhm/caffe_4/pavia/DataFind/pavia_find_best_801/pavia_test_220.h5"
+    MODEL_FILE = "/home/jhm/caffe_4/pavia/model_for_finetune5/deploy.prototxt"
+    PRETRAINED = "/home/jhm/caffe_4/indian_pine/rosis/pavia_net_801_iter_10000.caffemodel.h5"
+    output = "/home/jhm/caffe_4/data_analysis/test.mat"
+    args = "--model-h5 {} --data {} --output {} --prototxt {}".format(
+        PRETRAINED,
+        data_in_name,
+        output,
+        MODEL_FILE
+        #13359218581
+    )
+    os.system("python /home/jhm/caffe_4/data_analysis/classify_datasets.py {}".format(args))
+if __name__ == '__main__':
+    get_accuracy_from_small_number_finetune_pavia()
+
+"""
+--model-h5 "/home/jhm/caffe_4/indian_pine/rosis/pavia_net_801_iter_10000.caffemodel.h5"\
+--data "/home/jhm/caffe_4/pavia/DataFind/pavia_find_best_801/pavia_test_220.h5"\
+--output "/home/jhm/caffe_4/data_analysis/test.mat"\
+--prototxt 
+"""

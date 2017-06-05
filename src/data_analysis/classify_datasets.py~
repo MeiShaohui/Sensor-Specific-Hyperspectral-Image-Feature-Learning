@@ -1,0 +1,134 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jan  7 20:54:43 2016
+
+@author: root
+"""
+import h5py
+import string
+import find_caffe
+import caffe
+import numpy as np
+import scipy.io as sio
+from sklearn import metrics
+from optparse import OptionParser
+
+
+def getConfusionMat(Predict, Actual) :
+    Predict = np.array(map(int, Predict))
+    Actual = np.array(map(int, Actual))
+    classNums = np.unique(Predict)
+    confMat = np.zeros([classNums.size, classNums.size])
+    accuMat = confMat.copy()
+    accuMat_each = np.zeros(classNums.size)
+    acc = 0
+    for _ in np.arange(Predict.size) :
+        iCol = Predict[_]
+        iRow = Actual[_]
+        confMat[iRow, iCol] += 1
+    for iRow in np.arange(confMat.shape[0]) :
+        accuMat[iRow, :] = confMat[iRow, :] / confMat[iRow, :].sum()
+        accuMat_each[iRow] = accuMat[iRow, iRow]
+        acc += confMat[iRow, iRow]
+    acc = acc / float(Predict.size)
+    return confMat, accuMat, accuMat_each, acc
+
+
+def parse_args() :
+    parser = OptionParser()
+    parser.add_option("-m", "--model-h5", dest = "pretrained_model",
+                      help = "pretrained caffe model")
+    parser.add_option("-d", "--data", dest = "test_data_name",
+                      help = "the data which will be extract feature")
+    parser.add_option("-o", "--output", dest = "output_file_name",
+                      help = "data_index, 1 to 50")
+    parser.add_option("-p", "--prototxt", dest = "deploy_file",
+                      help = "prototxt file,define the structure of the network")
+
+    (options, args) = parser.parse_args()
+    return options
+
+
+def get_data(data_in_name, index_file_name = 'index_mat.mat') :
+    f = h5py.File(data_in_name, 'r')
+    data = f['data'][:]
+    label = f['label'][:]
+    f.close()
+    index_file = string.join(data_in_name.split('/')[:-1], '/') + '/' + index_file_name
+    index = sio.loadmat(index_file).get('index')
+    return data, label, index
+
+
+def get_h5_data(data_in_name) :
+    f = h5py.File(data_in_name, 'r')
+    data = f['data'][:]
+    label = f['label'][:]
+    f.close()
+    return data, label
+
+
+def get_ip1() :
+    ip1_dim = net.blobs['ip1'].data.shape[-1]
+    ip1_data = np.zeros((label.shape[0], ip1_dim), dtype = np.float32)
+    ip1_label = label
+    batch_size = net.blobs['data'].data.shape[0]
+    # put it into the CaffeNet
+    for i in np.arange(label.shape[0] / batch_size) :
+        net.blobs['data'].data[:] = data[i * batch_size :i * batch_size + batch_size, :, :, :]
+        net.forward()
+        ip1_data[i * batch_size :i * batch_size + batch_size, :] = net.blobs['ip1'].data.reshape(batch_size, ip1_dim)
+
+    if label.shape[0] % batch_size :
+        length = label.shape[0] % batch_size
+        net.blobs['data'].data[:] = data[label.shape[0] - batch_size :, :, :, :]
+        net.forward()
+        ip1_data[label.shape[0] - batch_size :, :] = net.blobs['ip1'].data.reshape(batch_size, ip1_dim)
+    return ip1_data, ip1_label
+
+
+def get_classify_results() :
+    # Get classify result from pretrained model
+    layer_name = net.outputs[0]
+    class_num = net.blobs['ip2'].data.shape[-1]
+    ip2_data = np.zeros((label.shape[0], class_num), dtype = np.float32)
+    ip2_label = label
+    batch_size = net.blobs['data'].data.shape[0]
+    # put it into the CaffeNet
+    for i in np.arange(label.shape[0] / batch_size) :
+        net.blobs['data'].data[:] = data[i * batch_size :i * batch_size + batch_size, :, :, :]
+        net.forward()
+        ip2_data[i * batch_size :i * batch_size + batch_size, :] = net.blobs['ip2'].data.reshape(batch_size, class_num)
+
+    if label.shape[0] % batch_size :
+        net.blobs['data'].data[:] = data[label.shape[0] - batch_size :, :, :, :]
+        net.forward()
+        ip2_data[label.shape[0] - batch_size :, :] = net.blobs['ip2'].data.reshape(batch_size, class_num)
+    return ip2_data, ip2_label
+
+
+def get_info(last_layer_data, ground_truth) :
+    Predict = last_layer_data.argmax(1)
+    # print size(find(err==0))/40976.0
+    confMat, accuMat, accuMat_each, acc = getConfusionMat(Predict, ground_truth)
+    result_dict = {'Predict' : Predict,
+                   'Actual' : ground_truth,
+                   'confusion' : confMat,
+                   'accuracy' : accuMat,
+                   'acc' : acc,
+                   'accuracy_2' : accuMat_each}
+    return result_dict
+
+
+if __name__ == '__main__' :
+    args = parse_args()
+    pretrained_model, test_data_name, output_file_name = args.pretrained_model, args.test_data_name, args.output_file_name
+    deploy_file = args.deploy_file
+
+    net = caffe.Net(deploy_file, pretrained_model, caffe.TEST)
+    data, label, index = get_data(test_data_name)
+    classify_data, classify_label = get_classify_results()
+    #result_dict = get_info(classify_data, classify_label)
+    print metrics.classification_report(label, classify_label)
+    sio.savemat(output_file_name, result_dict)
+
+#################################################################

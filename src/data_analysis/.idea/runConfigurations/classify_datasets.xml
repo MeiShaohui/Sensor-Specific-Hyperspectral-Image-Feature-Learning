@@ -1,0 +1,19 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="classify_datasets" type="PythonConfigurationType" factoryName="Python">
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+    </envs>
+    <option name="SDK_HOME" value="" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="IS_MODULE_SDK" value="true" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <module name="data_analysis" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/classify_datasets.py" />
+    <option name="PARAMETERS" value="--model-h5 &quot;$PROJECT_DIR$/../indian_pine/rosis/pavia_net_801_iter_10000.caffemodel.h5&quot; --data &quot;$PROJECT_DIR$/../pavia/DataFind/pavia_find_best_801/pavia_test_220.h5&quot; --output &quot;$PROJECT_DIR$/test.mat&quot; --prototxt &quot;$PROJECT_DIR$/../pavia/model_for_finetune5/deploy.prototxt&quot;" />
+    <option name="SHOW_COMMAND_LINE" value="false" />
+    <method />
+  </configuration>
+</component>
